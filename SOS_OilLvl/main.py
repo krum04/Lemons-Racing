@@ -1,7 +1,52 @@
+'''
+   Raspberry Pi Pico GPIO Pinout
+       _______
+  GP0  | 1  40 | VBUS
+  GP1  | 2  39 | VSYS
+  GND  | 3  38 | GND
+  GP2  | 4  37 | 3V3_EN
+  GP3  | 5  36 | 3V3(OUT)
+  GP4  | 6  35 | ADC_VREF
+  GP5  | 7  34 | GP28
+  GND  | 8  33 | GND
+  GP6  | 9  32 | GP27
+  GP7  | 10 31 | GP26
+  GP8  | 11 30 | RUN
+  GP9  | 12 29 | GP22
+  GND  | 13 28 | GND
+  GP10 | 14 27 | GP21
+  GP11 | 15 26 | GP20
+  GP12 | 16 25 | GP19
+  GP13 | 17 24 | GP18
+  GND  | 18 23 | GND
+  GP14 | 19 22 | GP17
+  GP15 | 20 21 | GP16
+       -------
+'''
+
 import tm1637
 from machine import Pin
 import utime
 import uos
+
+# Pin Assignments
+# myDisplay (TM1637 Display)
+# CLK: Pin 26
+# DIO: Pin 27
+
+# flowMeter: Pin 4
+# fillButton: Pin 5
+# lowLevel: Pin 3
+# fullLevel: Pin 2
+
+# pumpRelayA: Pin 14 (output, initialized as off)
+# pumpRelayB: Pin 15 (output, initialized as off)
+# lowIndicator: Pin 13 (output, initialized as off)
+# underHoodFull: Pin 6 (output, initialized as off)
+
+# LED outputs for indicating pump status
+# ledA: Pin 9 (output, initialized as off)
+# ledB: Pin 8 (output, initialized as off)
 
 # Functions to read and write oilVolume to a file
 def write_oil_volume_to_file(volume):
@@ -34,6 +79,7 @@ fullLevel = Pin(2, Pin.IN)
 pumpRelayA = Pin(14, Pin.OUT, value=1)  # Initialize as off
 pumpRelayB = Pin(15, Pin.OUT, value=1)  # Initialize as off
 lowIndicator = Pin(13, Pin.OUT, value=0)
+underHoodFull = Pin(6, Pin.OUT, value=0)
 
 # LED outputs for indicating pump status
 ledA = Pin(9, Pin.OUT, value=0)  # Initialize as off
@@ -46,12 +92,12 @@ myDisplay.number(oilVolume)
 # Add a global variable to track the last state of the flow meter
 lastFlowMeterState = 0 
 
-# Define debounce time in milliseconds
+# Define debounce time (e.g., 50ms)
 DEBOUNCE_TIME = 200
 
 def engagePump():
     global oilVolume
-    global lastFlowMeterState  
+    global lastFlowMeterState  # Use the global variable inside the function
     
     # Use Pump A by default
     pumpRelayA.value(0)  # Turn ON Pump A
@@ -95,17 +141,20 @@ def engagePump():
     pumpRelayB.value(1)  # Turn OFF Pump B
     ledB.value(0)  # Turn OFF LED B
 
-
-
 # New variable to track the countdown start
 countdown_start = 0
 
 while True:
     pumpRelayA.value(1)  # Ensure Pump A is OFF
     pumpRelayB.value(1)  # Ensure Pump B is OFF
-
     utime.sleep(.1)
-
+    
+    # Check full stutus sensor and light up underhood light acordingly
+    if fullLevel.value() == 1:
+        underHoodFull.off()
+    else:
+        underHoodFull.on()
+    
     if lowLevel.value() == 1:
         print("Low Oil")
         lowIndicator.on()
